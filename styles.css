@@ -1,0 +1,32 @@
+body {
+	margin: 50px;
+	color: #555;
+	font-size: 15px;
+	font-family: monospace;
+}
+
+.container {
+	position: relative;
+}
+
+.records {
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+
+.categories {
+	position: absolute;
+	top: 0;
+	left: 400px;
+}
+
+textarea {
+	width: 100%;
+	padding: 0 0 0 20px;
+	font: inherit;
+	color: inherit;
+	border: none;
+	outline: none;
+	resize: none;
+}
