@@ -18,7 +18,9 @@ body {
 .categories {
 	position: absolute;
 	top: 0;
-	left: 400px;
+	left: 50%;
+	background-color: rgba(255,255,255,0.9);
+	box-shadow: 0 0 0 10px rgba(255,255,255,0.9);
 }
 
 textarea {
@@ -26,6 +28,13 @@ textarea {
 	padding: 0 0 0 20px;
 	font: inherit;
 	color: inherit;
+
+	/* disable wrapping */
+	white-space: pre;
+	word-wrap: normal;
+	overflow-x: hidden;
+
+	/* hide artifacts */
 	border: none;
 	outline: none;
 	resize: none;
