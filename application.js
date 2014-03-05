@@ -62,7 +62,7 @@ var WhatIAmDoingApp = React.createClass({
 	handleNowWords: function (text) {
 		var now = new Date;
 		var nowStr = utils.padForWatch(now.getHours()) + ':' + utils.padForWatch(now.getMinutes());
-		var re = new RegExp('\n(' + NOW_WORDS.join('|') + ') $');
+		var re = new RegExp('\n(' + NOW_WORDS.join('|') + ') (\n*)$');
 		return ("\n" + text).replace(re, "\n" + nowStr + ' ').replace(/^\n/, '');
 	},
 
