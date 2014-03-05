@@ -80,8 +80,9 @@ var WhatIAmDoingApp = React.createClass({
 				return null;
 			}
 		});
+		var significantRecords = records.filter(function (r) {return r;});
 		var categories = {};
-		records.filter(function (r) {return r;}).reduce(function (record, nextRecord) {
+		significantRecords.length > 0 && significantRecords.reduce(function (record, nextRecord) {
 			var duration = nextRecord.minute - record.minute;
 			var category = categories[record.category] || (categories[record.category] = {time: 0});
 			category.time += duration;
