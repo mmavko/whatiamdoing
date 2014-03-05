@@ -2,6 +2,8 @@
 
 LINE_HEIGHT = 18;
 
+LOCAL_STORAGE_KEY = 'text';
+
 NOW_WORDS = [
 	'now', // english
 	'teraz', // polish
@@ -38,7 +40,7 @@ var WhatIAmDoingApp = React.createClass({
 
 	getInitialState: function () {
 		return {
-			log: INITIAL_LOG
+			log: localStorage.getItem(LOCAL_STORAGE_KEY) || INITIAL_LOG
 		};
 	},
 
@@ -46,9 +48,14 @@ var WhatIAmDoingApp = React.createClass({
 		this.process(this.state.log);
 	},
 
+	storeLog: function (text) {
+		localStorage.setItem(LOCAL_STORAGE_KEY, text);
+	},
+
 	onChange: function (e) {
 		var log = this.handleNowWords(e.target.value);
 		this.setState({log: log});
+		this.storeLog(log);
 		this.process(log);
 	},
 
