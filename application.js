@@ -22,6 +22,10 @@ INITIAL_LOG = [
 	'19:00 going home!',
 ].join("\n");
 
+ROOT_NODE_NAME = 'Total';
+REST_NODE_NAME = '<unknown>';
+
+
 var pad = function (symbol, length, str) {
 	var result = '' + str;
 	while (result.length < length) { result = symbol + result; }
@@ -35,6 +39,35 @@ var utils = {
 		return '' + Math.floor(minutes/60) + ':' + this.padForWatch(minutes % 60);
 	}
 };
+
+
+function Node(name) {
+	this.name = name;
+	this.time = 0;
+	this.children = {};
+}
+
+Node.prototype.add = function (time) {
+	this.time += time;
+};
+
+Node.prototype.access = function (link) {
+	return this.children[link] || (this.children[link] = new Node(link));
+};
+
+Node.prototype.getChildren = function () {
+	return Object.keys(this.children).map(function (link) {return this.children[link];}, this);
+};
+
+Node.prototype.sumup = function () {
+	this.getChildren().forEach(function (node) {node.sumup();});
+	var sum = this.getChildren().reduce(function (res, node) {return res + node.time;}, 0);
+	if (this.getChildren().length > 0 && this.time - sum > 0) {
+		var restNode = this.access(REST_NODE_NAME);
+		restNode.add(this.time - sum);
+	}
+};
+
 
 var WhatIAmDoingApp = React.createClass({
 
@@ -67,55 +100,67 @@ var WhatIAmDoingApp = React.createClass({
 	},
 
 	process: function (log) {
-		var records = log.split("\n").map(function (line) {
-			var matches;
-			if (matches = line.match(/(\d\d):(\d\d)\s+([^:]*)(\s*:?\s*(.*))?/)) {
+		var lines = log.split("\n").map(function (line) {
+			var matches, hours, minutes, rawPath, path;
+			if (matches = line.match(/(\d\d):(\d\d)\s+(.+)/)) {
+				hours = matches[1];
+				minutes = matches[2];
+				rawPath = matches[3];
+				path = rawPath.split(/\s*:\s*/);
 				return {
-					minute: parseInt(matches[1], 10) * 60 + parseInt(matches[2], 10),
-					category: matches[3],
-					task: matches[5],
+					minute: parseInt(hours, 10) * 60 + parseInt(minutes, 10),
+					path: path
 				};
 			}
 			else {
 				return null;
 			}
 		});
-		var significantRecords = records.filter(function (r) {return r;});
-		var categories = {};
-		significantRecords.length > 0 && significantRecords.reduce(function (record, nextRecord) {
+		var records = lines.filter(function (r) {return r;});
+		var rootNode = new Node(ROOT_NODE_NAME);
+		records.length > 0 && records.reduce(function (record, nextRecord) {
 			var duration = nextRecord.minute - record.minute;
-			var category = categories[record.category] || (categories[record.category] = {time: 0});
-			category.time += duration;
-			if (record.task) {
-				var tasks = category.tasks || (category.tasks = {});
-				var task = tasks[record.task] || (tasks[record.task] = {time: 0});
-				task.time += duration;
-			}
+			var currentNode = rootNode;
+			currentNode.add(duration);
+			record.path.forEach(function (link) {
+				currentNode = currentNode.access(link);
+				currentNode.add(duration);
+			});
 			return nextRecord;
 		});
+		rootNode.sumup();
 		this.setState({
-			records: records,
-			categories: categories
+			lines: lines,
+			rootNode: rootNode
 		});
 	},
 
 	render: function() {
 		var textareaHeight = LINE_HEIGHT * this.state.log.split("\n").length;
-		var records = this.state.records.map(function (record) {
+		var lines = this.state.lines.map(function (record) {
 			return <div style={{'height': LINE_HEIGHT}}>{record ? '✔' : null}</div>;
 		});
-		var categories = Object.keys(this.state.categories).map(function (categoryName) {
-			var category = this.state.categories[categoryName];
-			var tasks = category.tasks && Object.keys(category.tasks).map(function (taskName) {
-				return <li>{taskName}: {utils.watchTime(category.tasks[taskName].time)}</li>;
-			});
-			return <div>{categoryName}: {utils.watchTime(category.time)} <ul>{tasks}</ul></div>;
-		}, this);
+		function renderNode(level, node) {
+			var children = node.getChildren().map(renderNode.bind(null, level+1));
+			if (children.length > 0) {
+				children = <ul className={"nodes level-"+level}>{children}</ul>;
+			}
+			else {
+				children = null;
+			}
+			return (
+				<li key={node.name}>
+					<div>{node.name}: {utils.watchTime(node.time)}</div>
+					{children}
+				</li>
+			);
+		}
+		var nodes = renderNode(1, this.state.rootNode);
 		return (
 			<div className="container">
-				<div className="records">{records}</div>
+				<div className="lines">{lines}</div>
 				<textarea style={{height: textareaHeight + 5, 'line-height': LINE_HEIGHT}} value={this.state.log} onChange={this.onChange} />
-				<div className="categories">{categories}</div>
+				<ul className={"nodes level-root"}>{nodes}</ul>
 			</div>
 		);
 	}
