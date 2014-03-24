@@ -26,6 +26,7 @@ ROOT_NODE_NAME = 'Total';
 REST_NODE_NAME = '<unknown>';
 
 
+
 var pad = function (symbol, length, str) {
 	var result = '' + str;
 	while (result.length < length) { result = symbol + result; }
@@ -39,6 +40,7 @@ var utils = {
 		return '' + Math.floor(minutes/60) + ':' + this.padForWatch(minutes % 60);
 	}
 };
+
 
 
 function Node(name) {
@@ -69,16 +71,79 @@ Node.prototype.sumup = function () {
 };
 
 
+
+function Log(source) {
+	this.set(source);
+}
+
+Log.prototype.set = function (source) {
+	this._parse(source || '');
+};
+
+Log.prototype.getText = function () {
+	return this.source;
+};
+
+Log.prototype.getLines = function () {
+	return this._lines;
+};
+
+Log.prototype.getStats = function () {
+	return this._rootStatNode;
+};
+
+Log.prototype._parse = function (source) {
+	this.source = this._handleNowWords(source);
+	this._process();
+};
+
+Log.prototype._handleNowWords = function (source) {
+	var now = new Date;
+	var nowStr = utils.padForWatch(now.getHours()) + ':' + utils.padForWatch(now.getMinutes());
+	var re = new RegExp('\n(' + NOW_WORDS.join('|') + ') (\n*)$');
+	return ("\n" + source).replace(re, "\n" + nowStr + ' ').replace(/^\n/, '');
+};
+
+Log.prototype._process = function () {
+	var lines = this.source.split("\n").map(function (line) {
+		var matches, hours, minutes, rawPath, path;
+		if (matches = line.match(/(\d\d):(\d\d)\s+(.+)/)) {
+			hours = matches[1];
+			minutes = matches[2];
+			rawPath = matches[3];
+			path = rawPath.split(/\s*:\s*/);
+			return {
+				minute: parseInt(hours, 10) * 60 + parseInt(minutes, 10),
+				path: path
+			};
+		}
+		else {
+			return null;
+		}
+	});
+	var records = lines.filter(function (r) {return r;});
+	var rootNode = new Node(ROOT_NODE_NAME);
+	records.length > 0 && records.reduce(function (record, nextRecord) {
+		var duration = nextRecord.minute - record.minute;
+		var currentNode = rootNode;
+		currentNode.add(duration);
+		record.path.forEach(function (link) {
+			currentNode = currentNode.access(link);
+			currentNode.add(duration);
+		});
+		return nextRecord;
+	});
+	rootNode.sumup();
+	this._lines = lines;
+	this._rootStatNode = rootNode;
+};
+
+
+
 var WhatIAmDoingApp = React.createClass({
 
-	getInitialState: function () {
-		return {
-			log: localStorage.getItem(LOCAL_STORAGE_KEY) || INITIAL_LOG
-		};
-	},
-
 	componentWillMount: function () {
-		this.process(this.state.log);
+		this.log = new Log(localStorage.getItem(LOCAL_STORAGE_KEY) || INITIAL_LOG);
 	},
 
 	storeLog: function (text) {
@@ -86,60 +151,13 @@ var WhatIAmDoingApp = React.createClass({
 	},
 
 	onChange: function (e) {
-		var log = this.handleNowWords(e.target.value);
-		this.setState({log: log});
-		this.storeLog(log);
-		this.process(log);
+		var text = e.target.value;
+		this.storeLog(text);
+		this.log.set(text);
+		this.forceUpdate();
 	},
 
-	handleNowWords: function (text) {
-		var now = new Date;
-		var nowStr = utils.padForWatch(now.getHours()) + ':' + utils.padForWatch(now.getMinutes());
-		var re = new RegExp('\n(' + NOW_WORDS.join('|') + ') (\n*)$');
-		return ("\n" + text).replace(re, "\n" + nowStr + ' ').replace(/^\n/, '');
-	},
-
-	process: function (log) {
-		var lines = log.split("\n").map(function (line) {
-			var matches, hours, minutes, rawPath, path;
-			if (matches = line.match(/(\d\d):(\d\d)\s+(.+)/)) {
-				hours = matches[1];
-				minutes = matches[2];
-				rawPath = matches[3];
-				path = rawPath.split(/\s*:\s*/);
-				return {
-					minute: parseInt(hours, 10) * 60 + parseInt(minutes, 10),
-					path: path
-				};
-			}
-			else {
-				return null;
-			}
-		});
-		var records = lines.filter(function (r) {return r;});
-		var rootNode = new Node(ROOT_NODE_NAME);
-		records.length > 0 && records.reduce(function (record, nextRecord) {
-			var duration = nextRecord.minute - record.minute;
-			var currentNode = rootNode;
-			currentNode.add(duration);
-			record.path.forEach(function (link) {
-				currentNode = currentNode.access(link);
-				currentNode.add(duration);
-			});
-			return nextRecord;
-		});
-		rootNode.sumup();
-		this.setState({
-			lines: lines,
-			rootNode: rootNode
-		});
-	},
-
-	render: function() {
-		var textareaHeight = LINE_HEIGHT * this.state.log.split("\n").length;
-		var lines = this.state.lines.map(function (record) {
-			return <div style={{'height': LINE_HEIGHT}}>{record ? '✔' : null}</div>;
-		});
+	renderNodes: function () {
 		function renderNode(level, node) {
 			var children = node.getChildren().map(renderNode.bind(null, level+1));
 			if (children.length > 0) {
@@ -155,12 +173,20 @@ var WhatIAmDoingApp = React.createClass({
 				</li>
 			);
 		}
-		var nodes = renderNode(1, this.state.rootNode);
+		return <ul className={"nodes level-root"}>{renderNode(1, this.log.getStats())}</ul>;
+	},
+
+	render: function() {
+		var text = this.log.getText();
+		var textareaHeight = LINE_HEIGHT * text.split("\n").length;
+		var lines = this.log.getLines().map(function (record) {
+			return <div style={{'height': LINE_HEIGHT}}>{record ? '✔' : null}</div>;
+		});
 		return (
 			<div className="container">
 				<div className="lines">{lines}</div>
-				<textarea style={{height: textareaHeight + 5, 'line-height': LINE_HEIGHT}} value={this.state.log} onChange={this.onChange} />
-				<ul className={"nodes level-root"}>{nodes}</ul>
+				<textarea style={{height: textareaHeight + 5, 'line-height': LINE_HEIGHT}} value={text} onChange={this.onChange} />
+				{this.renderNodes()}
 			</div>
 		);
 	}
