@@ -123,8 +123,13 @@ Log.prototype._process = function () {
 	});
 	var records = lines.filter(function (r) {return r;});
 	var rootNode = new Node(ROOT_NODE_NAME);
+	// temporary solution to enable multiple day usage
+	var ignoreList = ['home', 'end'];
 	records.length > 0 && records.reduce(function (record, nextRecord) {
 		var duration = nextRecord.minute - record.minute;
+		if (ignoreList.indexOf(record.path[0]) >= 0) {
+			return nextRecord;
+		}
 		var currentNode = rootNode;
 		currentNode.add(duration);
 		record.path.forEach(function (link) {
