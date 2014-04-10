@@ -197,4 +197,4 @@ var WhatIAmDoingApp = React.createClass({
 	}
 });
 
-React.renderComponent(<WhatIAmDoingApp/>, document.body);
+React.renderComponent(<WhatIAmDoingApp/>, document.getElementById('whatiamdoing'));

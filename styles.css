@@ -39,3 +39,33 @@ textarea {
 	outline: none;
 	resize: none;
 }
+
+.help {
+	position: absolute;
+	width: 620px;
+	top: -430px;
+	right: 300px;
+	padding: 30px;
+	border: 1px solid grey;
+	border-radius: 5px;
+	background-color: whitesmoke;
+	z-index: 1;
+	transition: top 200ms;
+}
+
+.help:hover {
+	top: 20px;
+}
+
+.help .handle {
+	position: absolute;
+	right: 10px;
+	bottom: -50px;
+	line-height: 50px;
+}
+
+.help .handle span {
+	line-height: normal;
+	vertical-align: bottom;
+	color: red;
+}
