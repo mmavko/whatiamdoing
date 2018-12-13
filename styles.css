@@ -43,24 +43,32 @@ textarea {
 .help {
 	position: absolute;
 	width: 620px;
+	height: 410px;
+	padding-top: 20px;
 	top: -430px;
 	right: 300px;
-	padding: 30px;
-	border: 1px solid grey;
-	border-radius: 5px;
-	background-color: whitesmoke;
 	z-index: 1;
 	transition: top 200ms;
 }
 
 .help:hover {
-	top: 20px;
+	top: 0;
+}
+
+.help .container {
+  height: 100%;
+  box-sizing: border-box;
+  overflow: scroll;
+	padding: 30px;
+	border: 1px solid grey;
+	border-radius: 5px;
+	background-color: whitesmoke;
 }
 
 .help .handle {
 	position: absolute;
 	right: 10px;
-	bottom: -50px;
+	bottom: -30px;
 	line-height: 50px;
 }
 
